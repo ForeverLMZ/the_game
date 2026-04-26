@@ -1,579 +1,382 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Quantum Rainbow - Analytics Edition v2</title>
+    <title>Color Mixing Game - Analytics Edition</title>
     <style>
-        :root {
-            --bg-color: #000000;      
-            --grid-bg: #000000;       
-            --border-color: #333;     
-            --fog-color-1: #151515;
-            --fog-color-2: #202020;
-            --tile-size: 30px;
-        }
-
         body {
-            margin: 0; padding: 0;
-            background-color: var(--bg-color);
-            color: #e0e0e0;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            min-height: 100vh; overflow: hidden;
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
         }
 
-        #game-layout {
-            display: flex; gap: 20px; padding: 20px;
-            border: 1px solid var(--border-color);
-            background: rgba(255,255,255,0.02);
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(6, 60px);
+            grid-template-rows: repeat(6, 60px);
+            gap: 2px;
+            background-color: #333;
+            padding: 5px;
             border-radius: 8px;
-        }
-
-        #grid {
-            display: grid; gap: 1px;
-            background-color: transparent; 
-            border: 2px solid var(--border-color);
-            position: relative;
+            margin-bottom: 20px;
         }
 
         .tile {
-            width: var(--tile-size); height: var(--tile-size);
-            box-sizing: border-box; background-color: var(--grid-bg);
-            position: relative;
-        }
-
-        .tile.fog {
-            background-image: repeating-linear-gradient(
-                45deg, var(--fog-color-1), var(--fog-color-1) 5px,
-                var(--fog-color-2) 5px, var(--fog-color-2) 10px
-            );
-        }
-
-        .tile.wall {
-            background-color: #262424 !important; 
-            background-image: 
-                linear-gradient(335deg, rgba(0,0,0,0.6) 12px, transparent 12px),
-                linear-gradient(155deg, rgba(0,0,0,0.6) 12px, transparent 12px),
-                linear-gradient(335deg, rgba(0,0,0,0.6) 12px, transparent 12px),
-                linear-gradient(155deg, rgba(0,0,0,0.6) 12px, transparent 12px) !important;
-            background-size: 30px 30px !important;
-            background-position: 0px 1px, 2px 16px, 15px 15px, 17px 0px !important;
-            box-shadow: 
-                inset 1px 1px 3px rgba(255, 255, 255, 0.05),
-                inset -3px -3px 8px rgba(0, 0, 0, 0.9) !important;
-            border: 1px solid #0a0a0a; z-index: 1; 
-        }
-
-        @keyframes rainbow-halo {
-            0% { box-shadow: 0 0 5px rgba(255,0,0,0.5), 0 0 10px rgba(255,255,0,0.3), 0 0 15px rgba(0,255,0,0.1); }
-            50% { box-shadow: 0 0 10px rgba(0,255,255,0.6), 0 0 20px rgba(0,0,255,0.4), 0 0 30px rgba(255,0,255,0.2); }
-            100% { box-shadow: 0 0 5px rgba(255,0,0,0.5), 0 0 10px rgba(255,255,0,0.3), 0 0 15px rgba(0,255,0,0.1); }
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 15px rgba(255,255,255,0.7); }
-            100% { box-shadow: 0 0 30px rgba(255,255,255,1); }
-        }
-
-        .tile.wild-rainbow, .tile.final-rainbow {
-            background-color: #222 !important; border: 1px solid #444;
-            animation: rainbow-halo 3s infinite;
-        }
-
-        .tile.wild-rainbow.resonating, .tile.final-rainbow.resonating {
-            animation: none;
-            background-image: conic-gradient(
-                #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff 
-                var(--res-pct), #222 var(--res-pct)
-            ) !important;
-            box-shadow: 0 0 15px rgba(255, 255, 255, calc(var(--res-pct) / 100));
-        }
-
-        .tile.wild-rainbow.unlocked, .tile.final-rainbow.unlocked {
-            animation: pulse 1s infinite alternate;
-            background-image: linear-gradient(135deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff) !important;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.5rem;
+            box-sizing: border-box;
+            border: 2px solid transparent;
         }
 
         .player {
-            position: absolute; width: 70%; height: 70%;
-            border-radius: 50%; border: 2px solid rgba(255,255,255,0.8);
-            top: 15%; left: 15%; z-index: 10;
-            box-shadow: 0 0 8px rgba(255,255,255,0.5);
-            transition: all 0.1s;
+            border: 4px solid #fff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            box-shadow: 0 0 10px rgba(255,255,255,0.8);
         }
 
-        #sidebar {
-            width: 150px; display: flex; flex-direction: column;
-            align-items: center; padding-top: 20px;
+        .goal {
+            background-image: radial-gradient(circle, rgba(255,255,255,0.5) 20%, transparent 20%);
+            background-size: 10px 10px;
         }
-        .status-box {
-            border: 1px solid var(--border-color); padding: 15px;
-            border-radius: 4px; text-align: center; width: 100%;
+
+        #ui-panel {
+            text-align: center;
+            background: #222;
+            padding: 15px;
+            border-radius: 8px;
+            width: 350px;
         }
-        #player-swatch {
-            width: 60px; height: 60px; border: 2px solid #fff;
-            border-radius: 50%; margin: 10px auto; background-color: #000;
-            transition: background-color 0.2s;
+
+        .color-box {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #fff;
+            vertical-align: middle;
+            margin-left: 10px;
         }
-        #overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); display: none;
-            flex-direction: column; align-items: center; justify-content: center;
-            z-index: 100;
+
+        #message {
+            margin-top: 10px;
+            height: 20px;
+            color: #ff5555;
+            font-weight: bold;
         }
-        #end-message { font-size: 48px; font-weight: bold; color: #fff; margin-bottom: 20px; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
-        #stats-board {
-            background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 8px;
-            padding: 30px; font-size: 20px; line-height: 2; margin-bottom: 20px; min-width: 300px;
+        
+        .controls {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #aaa;
+            text-align: center;
         }
-        #replay-status { font-size: 16px; color: #aaa; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div id="game-layout">
-        <div id="grid"></div>
-        <div id="sidebar">
-            <div class="status-box">
-                <div>AGENT COLOR</div>
-                <div id="player-swatch"></div>
-            </div>
-            <div style="margin-top:20px; font-size:12px; color:#666; text-align:center;">
-                * No instructions provided. <br><br>Observe and hypothesize.
-            </div>
+    <div id="game-board" style="margin-top: 20px;"></div>
+
+    <div id="ui-panel">
+        <div><strong>Steps:</strong> <span id="steps-display">0</span> / 1500</div>
+        <div style="margin-top: 10px;">
+            <strong>Player Color:</strong> 
+            <span id="player-color-box" class="color-box" style="background-color: black;"></span>
+            (<span id="player-color-text">Black</span>)
         </div>
+        <div id="message"></div>
     </div>
 
-    <div id="overlay">
-        <div id="end-message">游戏通关 !</div>
-        <div id="stats-board"></div>
-        <div id="replay-status">正在生成探索轨迹 Log...</div>
+    <div class="controls">
+        <p>Use <strong>Arrow Keys</strong> to move.</p>
+        <p>Mix RGB to reach the bottom-right tile and turn it WHITE.</p>
+        <button onclick="initGame()" style="margin-top:10px; padding: 5px 15px;">Restart Game</button>
+        <p style="font-size: 0.8em; color: #888; margin-top: 15px;">(A replay log will automatically download upon win or timeout)</p>
     </div>
 
-<script>
-    const N = 11; 
-    const M = 6;  
-    const R_H = 3;
-
-    const TOTAL_COLS = N + 2;
-    const TOTAL_ROWS = N + M + R_H + 2;
-
-    const CORRIDOR_X = Math.floor(N / 2) + 1; 
-    const FINAL_RB_X = CORRIDOR_X;
-    const FINAL_RB_Y = N + M + 1 + 1; 
-
-    const HEX_MAP = {
-        "0,0,0": "#000000", "1,0,0": "#ff3333", "0,1,0": "#33ff33", "0,0,1": "#3333ff",
-        "1,1,0": "#ffff33", "1,0,1": "#ff33ff", "0,1,1": "#33ffff", "1,1,1": "#ffffff"
-    };
-
-    let gridState = [];   
-    let exploredMap = []; 
-    let cellElements = [];
-
-    let player = { x: 1, y: 1, color: [0,0,0] };
-    let gameStatus = 'playing';
-    let trajectory = [];
-    let initialSetup = {}; // 存储初始用于 Replay 的数据
-    
-    let gameStats = {
-        steps: 0,
-        overloads: 0,
-        startTime: Date.now()
-    };
-
-    let rainbows = []; 
-    const RING_OFFSETS = [[-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]];
-
-    function getRandomBaseColor() {
-        const r = Math.random();
-        if (r < 0.33) return [1,0,0];
-        if (r < 0.66) return [0,1,0];
-        return [0,0,1];
-    }
-
-    function initGame() {
-        const gridEl = document.getElementById('grid');
-        gridEl.style.gridTemplateColumns = `repeat(${TOTAL_COLS}, var(--tile-size))`;
-        gridEl.style.gridTemplateRows = `repeat(${TOTAL_ROWS}, var(--tile-size))`;
-
-        rainbows.push(createRainbowObj(FINAL_RB_X, FINAL_RB_Y, 'final'));
-
-        let wildCount = 0;
-        while(wildCount < 2) {
-            let rx = Math.floor(Math.random() * (N - 4)) + 3; 
-            let ry = Math.floor(Math.random() * (N - 4)) + 3;
-            if (!rainbows.some(rb => Math.abs(rb.x - rx) <= 2 && Math.abs(rb.y - ry) <= 2)) {
-                rainbows.push(createRainbowObj(rx, ry, 'wild'));
-                wildCount++;
-            }
-        }
-
-        // ==========================================
-        // 阶段一：生成底层逻辑地图状态
-        // ==========================================
-        for (let y = 0; y < TOTAL_ROWS; y++) {
-            gridState[y] = []; exploredMap[y] = [];
-            for (let x = 0; x < TOTAL_COLS; x++) {
-                exploredMap[y][x] = false;
-                let isWalkable = false;
-                let tileColor = [0,0,0];
-
-                if (x === 0 || x === TOTAL_COLS - 1 || y === 0 || y === TOTAL_ROWS - 1) isWalkable = false;
-                else if (y <= N && x <= N) isWalkable = true;
-                else if (y > N && y <= N + M) { if (x === CORRIDOR_X) isWalkable = true; }
-                else if (y > N + M && y < TOTAL_ROWS - 1) {
-                    if (x >= CORRIDOR_X - 2 && x <= CORRIDOR_X + 2) isWalkable = true;
-                }
-
-                // 主房间大面积随机生成颜料，排除野生彩虹周围
-                if (isWalkable && y <= N && x <= N && !(x===1 && y===1)) {
-                    let nearRainbow = rainbows.some(rb => Math.abs(rb.x - x) <= 1 && Math.abs(rb.y - y) <= 1);
-                    if (!nearRainbow && Math.random() < 0.25) { 
-                        tileColor = getRandomBaseColor();
-                    }
-                }
-                gridState[y][x] = isWalkable ? tileColor : null;
-            }
-        }
-
-        // ==========================================
-        // 阶段二：应用强制地图约束 (最终房间 & 野生引导)
-        // ==========================================
+    <script>
+        const GRID_SIZE = 6;
+        const MAX_STEPS = 1500;
         
-        // 约束 1：最终小房间，第一列和最后一列全是有色格子
-        const finalRoomTopY = N + M + 1;
-        const finalRoomBottomY = TOTAL_ROWS - 2;
-        for (let y = finalRoomTopY; y <= finalRoomBottomY; y++) {
-            gridState[y][CORRIDOR_X - 2] = getRandomBaseColor();
-            gridState[y][CORRIDOR_X + 2] = getRandomBaseColor();
-        }
-
-        // 约束 2：终极彩虹周围八个格子仅有 2-3 个彩色
-        let finalRingPos = RING_OFFSETS.map(r => [FINAL_RB_X + r[0], FINAL_RB_Y + r[1]]);
-        finalRingPos.forEach(pos => {
-            if (gridState[pos[1]][pos[0]] !== null) gridState[pos[1]][pos[0]] = [0,0,0];
-        });
-        let shuffledFinalRing = [...finalRingPos].sort(() => 0.5 - Math.random());
-        let finalColoredCount = Math.floor(Math.random() * 2) + 2; 
-        for(let i = 0; i < finalColoredCount; i++) {
-            let pos = shuffledFinalRing[i];
-            gridState[pos[1]][pos[0]] = getRandomBaseColor();
-        }
-
-        // 约束 3：野生彩虹周围强制生成 1-2 个有色格子（确保迷雾下仍可被发掘）
-        rainbows.forEach(rb => {
-            if (rb.type === 'wild') {
-                // 清空附近可能意外生成的干扰颜色
-                let validRing = rb.ringCoords.filter(pos => gridState[pos[1]][pos[0]] !== null);
-                validRing.forEach(pos => { gridState[pos[1]][pos[0]] = [0,0,0]; });
-                
-                // 随机抽取 1 到 2 个位置强制着色
-                let shuffledWildRing = [...validRing].sort(() => 0.5 - Math.random());
-                let wildColoredCount = Math.floor(Math.random() * 2) + 1; 
-                for(let i = 0; i < Math.min(wildColoredCount, shuffledWildRing.length); i++) {
-                    let pos = shuffledWildRing[i];
-                    gridState[pos[1]][pos[0]] = getRandomBaseColor();
-                }
-            }
-        });
-
-        // 标记所有彩虹本体位置
-        rainbows.forEach(rb => gridState[rb.y][rb.x] = [255,255,255]);
-
-        // 保存初始设定，用于完美的 Log 复盘导出
-        initialSetup = {
-            gridState: JSON.parse(JSON.stringify(gridState)),
-            rainbows: JSON.parse(JSON.stringify(rainbows))
+        // Colors mapping based on 3-bit RGB rule
+        const COLORS = {
+            "0,0,0": { name: "Black", hex: "#000000" },
+            "1,0,0": { name: "Red", hex: "#ff0000" },
+            "0,1,0": { name: "Green", hex: "#00ff00" },
+            "0,0,1": { name: "Blue", hex: "#0000ff" },
+            "1,1,0": { name: "Yellow", hex: "#ffff00" },
+            "1,0,1": { name: "Magenta", hex: "#ff00ff" },
+            "0,1,1": { name: "Cyan", hex: "#00ffff" },
+            "1,1,1": { name: "White", hex: "#ffffff" }
         };
 
-        // ==========================================
-        // 阶段三：DOM 渲染
-        // ==========================================
-        for (let y = 0; y < TOTAL_ROWS; y++) {
-            cellElements[y] = [];
-            for (let x = 0; x < TOTAL_COLS; x++) {
-                const tileEl = document.createElement('div');
-                let isWalkable = gridState[y][x] !== null;
-                tileEl.className = isWalkable ? 'tile fog' : 'tile wall'; 
+        const BASE_COLORS = [
+            [1, 0, 0], // Red
+            [0, 1, 0], // Green
+            [0, 0, 1]  // Blue
+        ];
 
-                let rbObj = rainbows.find(rb => rb.x === x && rb.y === y);
-                if (rbObj && rbObj.type === 'final') {
-                    tileEl.classList.add('lighthouse'); 
-                }
-                
-                gridEl.appendChild(tileEl);
-                cellElements[y][x] = tileEl;
+        let grid = [];
+        let px = 0, py = 0;
+        let pc = [0, 0, 0];
+        let steps = 0;
+        let done = false;
+
+        // Logging Variables
+        let startTime;
+        let overloads = 0;
+        let trajectory = [];
+        let initialSetup = {};
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
             }
         }
-        
-        recordTrajectory(); render();
-    }
 
-    function createRainbowObj(x, y, type) {
-        return {
-            x, y, type, ringCoords: RING_OFFSETS.map(r => [x + r[0], y + r[1]]),
-            resonance: 0, lastIndex: -1, direction: 0, unlocked: false, consumed: false
-        };
-    }
+        function initGame() {
+            grid = Array.from({ length: GRID_SIZE }, () => Array.from({ length: GRID_SIZE }, () => [0, 0, 0]));
+            px = 0;
+            py = 0;
+            pc = [0, 0, 0];
+            steps = 0;
+            done = false;
+            
+            // Reset logging state
+            startTime = Date.now();
+            overloads = 0;
+            trajectory = [];
 
-    function applyColorPhysics(nx, ny) {
-        const pCol = player.color;
-        const tCol = gridState[ny][nx];
-        if (tCol.join(',') === '255,255,255') return; 
+            document.getElementById('message').innerText = "";
+            document.getElementById('message').style.color = "#ff5555";
 
-        let nextVec = [ pCol[0] + tCol[0], pCol[1] + tCol[1], pCol[2] + tCol[2] ];
-        
-        if (nextVec[0] > 1 || nextVec[1] > 1 || nextVec[2] > 1) {
-            nextVec = [0, 0, 0];
-            gameStats.overloads++;
+            let avail = [];
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    if ((x === 0 && y === 0) || (x === 5 && y === 5)) continue;
+                    avail.push({x, y});
+                }
+            }
+
+            shuffle(avail);
+
+            // Mandatory one R, one G, one B
+            let mandatory = [...BASE_COLORS];
+            for (let i = 0; i < mandatory.length; i++) {
+                let pos = avail[i];
+                grid[pos.y][pos.x] = [...mandatory[i]];
+            }
+
+            // Scatter remaining with 25% chance of base color
+            for (let i = mandatory.length; i < avail.length; i++) {
+                if (Math.random() < 0.25) {
+                    let pos = avail[i];
+                    let randomBase = BASE_COLORS[Math.floor(Math.random() * BASE_COLORS.length)];
+                    grid[pos.y][pos.x] = [...randomBase];
+                }
+            }
+
+            // Save initial setup for the log
+            initialSetup = { gridState: JSON.parse(JSON.stringify(grid)) };
+            recordTrajectory();
+
+            render();
         }
 
-        player.color = [...nextVec];
-        gridState[ny][nx] = [...nextVec];
-    }
+        function handleKeydown(e) {
+            if (done) return;
 
-    function checkQuantumResonance(old_px, old_py, old_pColor, old_tColor) {
-        const wasBlack = old_pColor.join(',') === '0,0,0' && old_tColor.join(',') === '0,0,0';
-        rainbows.forEach(rb => {
-            if (rb.consumed || rb.unlocked) return;
-            const idx = rb.ringCoords.findIndex(c => c[0] === player.x && c[1] === player.y);
-            if (idx !== -1 && wasBlack) {
-                if (rb.lastIndex === -1) { rb.resonance = 1; rb.direction = 0; } 
-                else {
-                    let diff = idx - rb.lastIndex;
-                    if (diff === -7) diff = 1; if (diff === 7) diff = -1;
-                    if (Math.abs(diff) === 1) {
-                        if (rb.direction === 0) rb.direction = diff; 
-                        if (rb.direction === diff) rb.resonance++; 
-                        else { rb.resonance = 1; rb.direction = diff; } 
-                    } else { rb.resonance = 1; rb.direction = 0; }
-                }
-                if (rb.resonance >= 8) rb.unlocked = true;
+            let dx = 0, dy = 0;
+            if (e.key === "ArrowUp") dy = -1;
+            else if (e.key === "ArrowDown") dy = 1;
+            else if (e.key === "ArrowLeft") dx = -1;
+            else if (e.key === "ArrowRight") dx = 1;
+            else return;
+
+            e.preventDefault();
+            move(dx, dy);
+        }
+
+        function move(dx, dy) {
+            steps++;
+            let nx = px + dx;
+            let ny = py + dy;
+
+            // OOB attempt
+            if (nx < 0 || nx >= GRID_SIZE || ny < 0 || ny >= GRID_SIZE) {
+                recordTrajectory();
+                render();
+                checkTimeout();
+                return;
+            }
+
+            px = nx;
+            py = ny;
+
+            let tileColor = grid[ny][nx];
+            let mixed = [pc[0] + tileColor[0], pc[1] + tileColor[1], pc[2] + tileColor[2]];
+
+            let overload = mixed[0] > 1 || mixed[1] > 1 || mixed[2] > 1;
+
+            if (overload) {
+                pc = [0, 0, 0];
+                grid[ny][nx] = [0, 0, 0];
+                overloads++;
+                document.getElementById('message').innerText = "OVERLOAD! Colors destroyed.";
             } else {
-                if (rb.resonance > 0) { rb.resonance = 0; rb.direction = 0; }
+                pc = [...mixed];
+                grid[ny][nx] = [...mixed];
+                document.getElementById('message').innerText = "";
             }
-            rb.lastIndex = idx;
-        });
-    }
 
-    function handleMove(dx, dy) {
-        if (gameStatus !== 'playing') return;
+            recordTrajectory();
+            render();
 
-        const nx = player.x + dx, ny = player.y + dy;
-        if (ny < 0 || ny >= TOTAL_ROWS || nx < 0 || nx >= TOTAL_COLS) return;
-        if (gridState[ny][nx] === null) return; 
-
-        gameStats.steps++;
-
-        const old_pCol = [...player.color];
-        const old_tCol = [...gridState[ny][nx]];
-
-        let hitRainbow = rainbows.find(rb => rb.x === nx && rb.y === ny && !rb.consumed);
-        if (hitRainbow) {
-            if (!hitRainbow.unlocked) return; 
-
-            player.x = nx; player.y = ny; player.color = [0,0,0]; 
-            gridState[ny][nx] = [0,0,0]; hitRainbow.consumed = true; 
-
-            if (hitRainbow.type === 'final') { executeWinSequence(); return; } 
-            else { updateVision(); recordTrajectory(); render(); return; }
-        }
-
-        player.x = nx; player.y = ny;
-        applyColorPhysics(nx, ny);
-        checkQuantumResonance(player.x - dx, player.y - dy, old_pCol, old_tCol);
-        
-        updateVision(); recordTrajectory(); render();
-    }
-
-    function updateVision() {
-        exploredMap[player.y][player.x] = true;
-        for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-                let vy = player.y + dy, vx = player.x + dx;
-                if (vy>=0 && vy<TOTAL_ROWS && vx>=0 && vx<TOTAL_COLS && gridState[vy][vx] !== null) {
-                    exploredMap[vy][vx] = true;
-                }
+            // Check Win (Goal tile is White)
+            if (grid[5][5].join(',') === "1,1,1") {
+                done = true;
+                let timeTaken = ((Date.now() - startTime) / 1000).toFixed(1);
+                document.getElementById('message').innerText = `Game Complete! Play time: ${timeTaken} seconds`;
+                document.getElementById('message').style.color = "#00ff00";
+                endGame(true, timeTaken);
+            } else {
+                checkTimeout();
             }
         }
-    }
 
-    function render() {
-        for (let y = 0; y < TOTAL_ROWS; y++) {
-            for (let x = 0; x < TOTAL_COLS; x++) {
-                const tileEl = cellElements[y][x];
-                if (gridState[y][x] === null) continue; 
-                
-                tileEl.innerHTML = ''; tileEl.className = 'tile'; 
-                
-                let isFog = !exploredMap[y][x];
-                if (isFog) tileEl.classList.add('fog');
-                
-                let rb = rainbows.find(r => r.x === x && r.y === y && !r.consumed);
-                if (rb) {
-                    let rbClass = rb.type === 'wild' ? 'wild-rainbow' : 'final-rainbow';
-                    tileEl.classList.add(rbClass);
-
-                    if (rb.type === 'final') {
-                        tileEl.classList.add('lighthouse'); 
-                        if (isFog) tileEl.classList.add('fog');
-                    }
-                    
-                    if (!isFog || (rb.type === 'final')) {
-                        if (rb.unlocked) tileEl.classList.add('unlocked');
-                        else if (rb.resonance > 0) {
-                            tileEl.classList.add('resonating');
-                            tileEl.style.setProperty('--res-pct', `${(rb.resonance / 8) * 100}%`);
-                        }
-                    }
-                } else {
-                    let colStr = gridState[y][x].join(',');
-                    if (colStr !== '255,255,255') tileEl.style.backgroundColor = isFog ? '' : HEX_MAP[colStr];
-                }
-
-                if (x === player.x && y === player.y) {
-                    const pEl = document.createElement('div'); pEl.className = 'player';
-                    pEl.style.backgroundColor = HEX_MAP[player.color.join(',')];
-                    if (player.color.join(',') === '1,1,1') pEl.style.borderColor = '#444';
-                    tileEl.appendChild(pEl);
-                }
+        function checkTimeout() {
+            if (steps >= MAX_STEPS && !done) {
+                done = true;
+                let timeTaken = ((Date.now() - startTime) / 1000).toFixed(1);
+                document.getElementById('message').innerText = `TIMED OUT! Play time: ${timeTaken} seconds`;
+                endGame(false, timeTaken);
             }
         }
-        document.getElementById('player-swatch').style.backgroundColor = HEX_MAP[player.color.join(',')];
-    }
 
-    function recordTrajectory() {
-        trajectory.push({
-            x: player.x, y: player.y, pColor: [...player.color],
-            gridColors: gridState.map(row => row.map(col => col ? [...col] : null)),
-            rbState: JSON.parse(JSON.stringify(rainbows)) 
-        });
-    }
+        // --- LOGGING & ANALYTICS FUNCTIONS ---
 
-    // ==========================================
-    // 带有重现机制数据的 Log 生成器
-    // ==========================================
-    function generateLogText() {
-        let log = "=== THE QUANTUM RAINBOW - EXPLORATION LOG ===\r\n\r\n";
-        let timeTaken = ((Date.now() - gameStats.startTime) / 1000).toFixed(1);
-        let wildUnlocked = rainbows.filter(r => r.type==='wild' && r.unlocked).length;
+        function recordTrajectory() {
+            trajectory.push({
+                step: steps,
+                x: px, 
+                y: py, 
+                pColor: [...pc]
+            });
+        }
 
-        log += `[ METRICS ]\r\n`;
-        log += `Time Taken: ${timeTaken} seconds\r\n`;
-        log += `Total Steps: ${gameStats.steps}\r\n`;
-        log += `Overload Triggers: ${gameStats.overloads}\r\n`;
-        log += `Wild Rainbows Unlocked: ${wildUnlocked} / 2\r\n\r\n`;
-        
-        log += "[ INITIAL MAP SEED (ASCII) ]\r\n";
-        log += "W=Wall, *=Rainbow, .=Empty, R=Red, G=Green, B=Blue\r\n";
-        for (let y = 0; y < TOTAL_ROWS; y++) {
-            let rowStr = "";
-            for (let x = 0; x < TOTAL_COLS; x++) {
-                if (initialSetup.gridState[y][x] === null) rowStr += "W ";
-                else {
+        function generateLogText(isWin, timeTaken) {
+            let log = "=== CHROMATIC WHITE - HUMAN EXPLORATION LOG ===\r\n\r\n";
+            log += `[ METRICS ]\r\n`;
+            log += `Result: ${isWin ? "SOLVED" : "TIMEOUT"}\r\n`;
+            log += `Time Taken: ${timeTaken} seconds\r\n`;
+            log += `Total Steps: ${steps}\r\n`;
+            log += `Overload Triggers: ${overloads}\r\n\r\n`;
+            
+            log += "[ INITIAL MAP SEED ]\r\n";
+            for (let y = 0; y < GRID_SIZE; y++) {
+                let rowStr = "";
+                for (let x = 0; x < GRID_SIZE; x++) {
                     let col = initialSetup.gridState[y][x].join(',');
                     if (col === '0,0,0') rowStr += ". ";
                     else if (col === '1,0,0') rowStr += "R ";
                     else if (col === '0,1,0') rowStr += "G ";
                     else if (col === '0,0,1') rowStr += "B ";
-                    else if (col === '255,255,255') rowStr += "* ";
-                    else rowStr += "C "; // 理论上初始不会有混合色
+                    else rowStr += "? "; // Theoretically no mixed colors at start
+                }
+                log += rowStr + "\r\n";
+            }
+            log += "\r\n";
+
+            log += "[ TRAJECTORY ]\r\n";
+            trajectory.forEach((state) => {
+                log += `Step ${state.step.toString().padStart(4, '0')}: Pos(${state.x.toString().padStart(2, ' ')}, ${state.y.toString().padStart(2, ' ')}), Color[${state.pColor.join(',')}]\r\n`;
+            });
+            
+            log += "\r\n=== MACHINE READABLE REPLAY DATA (JSON) ===\r\n";
+            const replayDataObj = {
+                isWin: isWin,
+                timeTaken: parseFloat(timeTaken),
+                steps: steps,
+                overloads: overloads,
+                initialGrid: initialSetup.gridState,
+                path: trajectory.map(t => ({ step: t.step, x: t.x, y: t.y, pColor: t.pColor }))
+            };
+            log += JSON.stringify(replayDataObj);
+            
+            return log;
+        }
+
+        function downloadLogFile(text) {
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `human_eval_chromatic_white_${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function endGame(isWin, timeTaken) {
+            const logData = generateLogText(isWin, timeTaken);
+            downloadLogFile(logData);
+        }
+
+        // --- RENDERING ---
+
+        function render() {
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    let tileData = grid[y][x];
+                    let colorObj = COLORS[tileData.join(',')];
+                    
+                    let cell = document.createElement('div');
+                    cell.className = 'tile';
+                    cell.style.backgroundColor = colorObj.hex;
+
+                    if (x === 5 && y === 5 && grid[5][5].join(',') !== "1,1,1") {
+                        cell.classList.add('goal');
+                    }
+
+                    if (x === px && y === py) {
+                        let pIndicator = document.createElement('div');
+                        pIndicator.className = 'player';
+                        let pColorObj = COLORS[pc.join(',')];
+                        pIndicator.style.backgroundColor = pColorObj.hex;
+                        cell.appendChild(pIndicator);
+                    }
+
+                    board.appendChild(cell);
                 }
             }
-            log += rowStr + "\r\n";
+
+            document.getElementById('steps-display').innerText = steps;
+            
+            let pColorData = COLORS[pc.join(',')];
+            document.getElementById('player-color-box').style.backgroundColor = pColorData.hex;
+            document.getElementById('player-color-text').innerText = pColorData.name;
         }
-        log += "\r\n";
 
-        log += "[ TRAJECTORY ]\r\n";
-        trajectory.forEach((state, i) => {
-            log += `Step ${i.toString().padStart(4, '0')}: Pos(${state.x.toString().padStart(2, ' ')}, ${state.y.toString().padStart(2, ' ')}), Color[${state.pColor.join(',')}]\r\n`;
-        });
+        window.addEventListener("keydown", handleKeydown);
         
-        log += "\r\n=== MACHINE READABLE REPLAY DATA (JSON) ===\r\n";
-        // 构造供代码/解析器直接加载的纯净 JSON 数据
-        const replayDataObj = {
-            initialGrid: initialSetup.gridState,
-            initialRainbows: initialSetup.rainbows,
-            path: trajectory.map(t => ({ x: t.x, y: t.y, pColor: t.pColor }))
-        };
-        log += JSON.stringify(replayDataObj);
-        
-        return log;
-    }
-
-    function downloadLogFile(text) {
-        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `quantum_rainbow_log_${Date.now()}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-    }
-
-    function executeWinSequence() {
-        gameStatus = 'won';
-        render();
-        
-        let timeTaken = ((Date.now() - gameStats.startTime) / 1000).toFixed(1);
-        let wildUnlocked = rainbows.filter(r => r.type==='wild' && r.unlocked).length;
-        
-        const statsBoard = document.getElementById('stats-board');
-        statsBoard.innerHTML = `
-            <div style="color: #4CAF50;">➤ 游玩时长：${timeTaken} 秒</div>
-            <div style="color: #2196F3;">➤ 移动步数：${gameStats.steps} 步</div>
-            <div style="color: #F44336;">➤ 触发过载次数：${gameStats.overloads} 次</div>
-            <div style="color: #FFC107;">➤ 野生彩虹解锁：${wildUnlocked} / 2</div>
-        `;
-        
-        document.getElementById('overlay').style.display = 'flex';
-        
-        const logData = generateLogText();
-        downloadLogFile(logData);
-
-        setTimeout(() => {
-            document.getElementById('replay-status').innerText = "Starting Replay...";
-            startReplay();
-        }, 3000);
-    }
-
-    function startReplay() {
-        gameStatus = 'replaying';
-        for(let y=0; y<TOTAL_ROWS; y++) for(let x=0; x<TOTAL_COLS; x++) exploredMap[y][x] = true;
-
-        let frame = 0;
-        const interval = setInterval(() => {
-            if (frame >= trajectory.length) {
-                clearInterval(interval);
-                document.getElementById('replay-status').innerText = "Replay Finished.";
-                return;
-            }
-            let state = trajectory[frame];
-            player.x = state.x; player.y = state.y; player.color = state.pColor;
-            gridState = state.gridColors; rainbows = state.rbState;
-            render();
-            frame++;
-        }, 150); 
-    }
-
-    window.addEventListener('keydown', e => {
-        if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
-        switch (e.key.toLowerCase()) {
-            case 'w': case 'arrowup':    handleMove(0, -1); break;
-            case 's': case 'arrowdown':  handleMove(0, 1);  break;
-            case 'a': case 'arrowleft':  handleMove(-1, 0); break;
-            case 'd': case 'arrowright': handleMove(1, 0);  break;
-        }
-    });
-
-    initGame();
-
-</script>
+        // Start game on load
+        initGame();
+    </script>
 </body>
 </html>
